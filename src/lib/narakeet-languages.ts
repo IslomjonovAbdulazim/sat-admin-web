@@ -1,0 +1,125 @@
+// Narakeet supported languages (104 total)
+export interface NarakeetLanguage {
+  code: string
+  name: string
+  region?: string
+}
+
+export const NARAKEET_LANGUAGES: NarakeetLanguage[] = [
+  // English variants
+  { code: 'en-US', name: 'English', region: 'United States' },
+  { code: 'en-GB', name: 'English', region: 'United Kingdom' },
+  { code: 'en-AU', name: 'English', region: 'Australia' },
+  { code: 'en-CA', name: 'English', region: 'Canada' },
+  { code: 'en-IE', name: 'English', region: 'Ireland' },
+  { code: 'en-IN', name: 'English', region: 'India' },
+  { code: 'en-NZ', name: 'English', region: 'New Zealand' },
+  { code: 'en-ZA', name: 'English', region: 'South Africa' },
+  { code: 'en-NG', name: 'English', region: 'Nigeria' },
+  { code: 'en-PH', name: 'English', region: 'Philippines' },
+  { code: 'en-SG', name: 'English', region: 'Singapore' },
+  
+  // Other languages
+  { code: 'af', name: 'Afrikaans' },
+  { code: 'sq', name: 'Albanian' },
+  { code: 'am', name: 'Amharic' },
+  { code: 'ar', name: 'Arabic' },
+  { code: 'hy', name: 'Armenian' },
+  { code: 'as', name: 'Assamese' },
+  { code: 'az', name: 'Azerbaijani' },
+  { code: 'bn-BD', name: 'Bangla', region: 'Bangladesh' },
+  { code: 'bn-IN', name: 'Bangla', region: 'India' },
+  { code: 'eu', name: 'Basque' },
+  { code: 'bs', name: 'Bosnian' },
+  { code: 'bg', name: 'Bulgarian' },
+  { code: 'my', name: 'Burmese' },
+  { code: 'ca', name: 'Catalan' },
+  { code: 'zh-CN', name: 'Chinese', region: 'Mandarin' },
+  { code: 'zh-TW', name: 'Chinese', region: 'Taiwanese' },
+  { code: 'zh-HK', name: 'Chinese', region: 'Cantonese' },
+  { code: 'hr', name: 'Croatian' },
+  { code: 'cs', name: 'Czech' },
+  { code: 'da', name: 'Danish' },
+  { code: 'nl-NL', name: 'Dutch', region: 'Netherlands' },
+  { code: 'nl-BE', name: 'Dutch', region: 'Belgium' },
+  { code: 'et', name: 'Estonian' },
+  { code: 'fi', name: 'Finnish' },
+  { code: 'fil', name: 'Filipino' },
+  { code: 'fr-FR', name: 'French', region: 'France' },
+  { code: 'fr-CA', name: 'French', region: 'Canada' },
+  { code: 'fr-BE', name: 'French', region: 'Belgium' },
+  { code: 'fr-CH', name: 'French', region: 'Switzerland' },
+  { code: 'gl', name: 'Galician' },
+  { code: 'de-DE', name: 'German', region: 'Germany' },
+  { code: 'de-AT', name: 'German', region: 'Austria' },
+  { code: 'de-CH', name: 'German', region: 'Switzerland' },
+  { code: 'ka', name: 'Georgian' },
+  { code: 'el', name: 'Greek' },
+  { code: 'gu', name: 'Gujarati' },
+  { code: 'he', name: 'Hebrew' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'hu', name: 'Hungarian' },
+  { code: 'is', name: 'Icelandic' },
+  { code: 'id', name: 'Indonesian' },
+  { code: 'ga', name: 'Irish' },
+  { code: 'it', name: 'Italian' },
+  { code: 'ja', name: 'Japanese' },
+  { code: 'jv', name: 'Javanese' },
+  { code: 'kn', name: 'Kannada' },
+  { code: 'kk', name: 'Kazakh' },
+  { code: 'km', name: 'Khmer' },
+  { code: 'ko', name: 'Korean' },
+  { code: 'lo', name: 'Lao' },
+  { code: 'lv', name: 'Latvian' },
+  { code: 'lt', name: 'Lithuanian' },
+  { code: 'mk', name: 'Macedonian' },
+  { code: 'ms', name: 'Malaysian' },
+  { code: 'ml', name: 'Malayalam' },
+  { code: 'mt', name: 'Maltese' },
+  { code: 'mr', name: 'Marathi' },
+  { code: 'mn', name: 'Mongolian' },
+  { code: 'ne', name: 'Nepali' },
+  { code: 'no', name: 'Norwegian' },
+  { code: 'or', name: 'Odia' },
+  { code: 'ps', name: 'Pashto' },
+  { code: 'fa', name: 'Persian' },
+  { code: 'pl', name: 'Polish' },
+  { code: 'pt-PT', name: 'Portuguese', region: 'Portugal' },
+  { code: 'pt-BR', name: 'Portuguese', region: 'Brazil' },
+  { code: 'pa', name: 'Punjabi' },
+  { code: 'ro', name: 'Romanian' },
+  { code: 'ru', name: 'Russian' },
+  { code: 'sr', name: 'Serbian' },
+  { code: 'si', name: 'Sinhala' },
+  { code: 'sk', name: 'Slovak' },
+  { code: 'sl', name: 'Slovene' },
+  { code: 'so', name: 'Somali' },
+  { code: 'es-ES', name: 'Spanish', region: 'Spain' },
+  { code: 'es-MX', name: 'Spanish', region: 'Mexico' },
+  { code: 'es-US', name: 'Spanish', region: 'United States' },
+  { code: 'es-PR', name: 'Spanish', region: 'Puerto Rico' },
+  { code: 'su', name: 'Sundanese' },
+  { code: 'sv', name: 'Swedish' },
+  { code: 'sw', name: 'Swahili' },
+  { code: 'ta', name: 'Tamil' },
+  { code: 'te', name: 'Telugu' },
+  { code: 'th', name: 'Thai' },
+  { code: 'tr', name: 'Turkish' },
+  { code: 'uk', name: 'Ukrainian' },
+  { code: 'ur', name: 'Urdu' },
+  { code: 'uz', name: 'Uzbek' },
+  { code: 'vi', name: 'Vietnamese' },
+  { code: 'cy', name: 'Welsh' },
+  { code: 'zu', name: 'Zulu' }
+]
+
+export function getLanguageDisplayName(language: NarakeetLanguage): string {
+  if (language.region) {
+    return `${language.name} (${language.region})`
+  }
+  return language.name
+}
+
+export function findLanguageByCode(code: string): NarakeetLanguage | undefined {
+  return NARAKEET_LANGUAGES.find(lang => lang.code === code)
+}
