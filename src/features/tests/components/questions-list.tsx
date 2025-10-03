@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { MoreHorizontal, Edit, Trash2, Eye, Plus, FileText } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Eye, Plus, FileText, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -21,6 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { questionsApi, type Question } from '@/lib/questions-api'
 
 interface QuestionsListProps {
@@ -40,6 +46,8 @@ export function QuestionsList({
 }: QuestionsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null)
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [questionToPreview, setQuestionToPreview] = useState<Question | null>(null)
   const queryClient = useQueryClient()
 
   const deleteQuestionMutation = useMutation({
@@ -65,9 +73,8 @@ export function QuestionsList({
   }
 
   const handlePreview = (question: Question) => {
-    // TODO: Implement proper preview functionality
-    // For now, we'll show an alert with question details
-    alert(`Question Preview:\n\nTitle: ${question.title}\nType: ${getTypeLabel(question.type)}\nContent: ${question.content_markdown}\nAnswer(s): ${question.answer.join(', ')}`)
+    setQuestionToPreview(question)
+    setPreviewDialogOpen(true)
   }
 
   const handleDeleteConfirm = () => {
@@ -86,6 +93,13 @@ export function QuestionsList({
 
   const getModuleTitle = (moduleId: number) => {
     return modules.find(m => m.id === moduleId)?.title || `Module #${moduleId}`
+  }
+
+  const renderMarkdown = (markdown: string) => {
+    return markdown
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br/>')
   }
 
   if (isLoading) {
@@ -245,6 +259,100 @@ export function QuestionsList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Question Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-semibold">Question Preview</DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreviewDialogOpen(false)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          
+          {questionToPreview && (
+            <div className="space-y-6 mt-4">
+              {/* Question Header */}
+              <div className="border-b pb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <h2 className="text-lg font-medium">{questionToPreview.title}</h2>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className={`${getTypeBadgeColor(questionToPreview.type)}`}>
+                      {getTypeLabel(questionToPreview.type)}
+                    </Badge>
+                    <Badge variant="default">Active</Badge>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Module: {questionToPreview.module?.title || getModuleTitle(questionToPreview.module?.id || 0)} | 
+                  Position: {questionToPreview.position}
+                </div>
+              </div>
+
+              {/* Question Content */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <h3 className="font-medium mb-2">Question Content:</h3>
+                <div 
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ 
+                    __html: renderMarkdown(questionToPreview.content_markdown) 
+                  }}
+                />
+              </div>
+
+              {/* MCQ Choices */}
+              {questionToPreview.type === 'mcq' && questionToPreview.choices && (
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <h3 className="font-medium mb-3">Answer Choices:</h3>
+                  <div className="space-y-2">
+                    {questionToPreview.choices.map((choice, index) => (
+                      <div key={index} className="flex items-start gap-3 p-2 rounded border">
+                        <Badge variant="outline" className="mt-0.5 min-w-[24px] justify-center">
+                          {choice.label}
+                        </Badge>
+                        <div 
+                          className="flex-1 text-sm"
+                          dangerouslySetInnerHTML={{ 
+                            __html: renderMarkdown(choice.content_markdown) 
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Correct Answer */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-medium text-green-800 mb-2">Correct Answer(s):</h3>
+                <div className="text-green-700">
+                  {questionToPreview.answer.join(', ')}
+                </div>
+              </div>
+
+              {/* Explanation */}
+              {questionToPreview.explanation_markdown && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-medium text-blue-800 mb-2">Explanation:</h3>
+                  <div 
+                    className="prose prose-sm max-w-none text-blue-700"
+                    dangerouslySetInnerHTML={{ 
+                      __html: renderMarkdown(questionToPreview.explanation_markdown) 
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
