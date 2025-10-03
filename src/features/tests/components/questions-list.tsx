@@ -64,6 +64,12 @@ export function QuestionsList({
     setDeleteDialogOpen(true)
   }
 
+  const handlePreview = (question: Question) => {
+    // TODO: Implement proper preview functionality
+    // For now, we'll show an alert with question details
+    alert(`Question Preview:\n\nTitle: ${question.title}\nType: ${getTypeLabel(question.type)}\nContent: ${question.content_markdown}\nAnswer(s): ${question.answer.join(', ')}`)
+  }
+
   const handleDeleteConfirm = () => {
     if (questionToDelete) {
       deleteQuestionMutation.mutate(questionToDelete.id)
@@ -108,53 +114,41 @@ export function QuestionsList({
 
   return (
     <>
-      {/* Questions List */}
-      <div className='space-y-4'>
+      {/* Questions Grid */}
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
         {data.map((question) => (
           <div
             key={question.id}
-            className='border rounded-xl p-6 hover:shadow-lg transition-all duration-200 bg-card'
+            className='border rounded-lg p-3 hover:shadow-md transition-all duration-200 bg-card flex flex-col'
           >
-            <div className='flex items-start justify-between mb-4'>
-              <div className='space-y-2 flex-1'>
-                <div className='flex items-center gap-3'>
-                  <h3 className='font-semibold text-lg'>{question.title}</h3>
-                  <Badge variant='outline' className={getTypeBadgeColor(question.type)}>
-                    {getTypeLabel(question.type)}
+            {/* Header */}
+            <div className='flex items-start justify-between mb-2'>
+              <div className='flex-1'>
+                <h3 className='font-semibold text-sm line-clamp-2 mb-1'>{question.title}</h3>
+                <div className='flex items-center gap-1'>
+                  <Badge variant='outline' className={`${getTypeBadgeColor(question.type)} text-xs px-1 py-0 h-4`}>
+                    {question.type === 'mcq' ? 'MCQ' : 'Fill'}
                   </Badge>
-                  <Badge variant='default'>
-                    Active
-                  </Badge>
+                  <Badge variant='default' className='text-xs px-1 py-0 h-4'>Active</Badge>
                 </div>
-                <p className='text-sm text-muted-foreground'>
-                  {question.module?.title || getModuleTitle(question.module?.id || 0)}
-                </p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant='ghost' className='h-8 w-8 p-0'>
-                    <span className='sr-only'>Open menu</span>
-                    <MoreHorizontal className='h-4 w-4' />
+                  <Button variant='ghost' className='h-6 w-6 p-0 ml-1'>
+                    <MoreHorizontal className='h-3 w-3' />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align='end'>
-                  <DropdownMenuItem
-                    onClick={() => {/* TODO: Preview question */}}
-                  >
+                  <DropdownMenuItem onClick={() => handlePreview(question)}>
                     <Eye className='mr-2 h-4 w-4' />
                     Preview
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onEdit(question)}
-                  >
+                  <DropdownMenuItem onClick={() => onEdit(question)}>
                     <Edit className='mr-2 h-4 w-4' />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => handleDeleteClick(question)}
-                    className='text-destructive'
-                  >
+                  <DropdownMenuItem onClick={() => handleDeleteClick(question)} className='text-destructive'>
                     <Trash2 className='mr-2 h-4 w-4' />
                     Delete
                   </DropdownMenuItem>
@@ -162,70 +156,66 @@ export function QuestionsList({
               </DropdownMenu>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm mb-4'>
-              <div className='space-y-1'>
-                <span className='text-muted-foreground'>Position:</span>
-                <div className='font-medium'>{question.position}</div>
-              </div>
-              <div className='space-y-1'>
-                <span className='text-muted-foreground'>Answer(s):</span>
-                <div className='font-medium'>{question.answer.join(', ')}</div>
-              </div>
-              <div className='space-y-1'>
-                <span className='text-muted-foreground'>Type:</span>
-                <div className='font-medium'>{getTypeLabel(question.type)}</div>
-              </div>
-              <div className='space-y-1'>
-                <span className='text-muted-foreground'>Choices:</span>
-                <div className='font-medium'>
-                  {question.type === 'mcq' ? (question.choices?.length || 0) : 'N/A'}
-                </div>
-              </div>
+            <p className='text-xs text-muted-foreground mb-2 truncate'>
+              {question.module?.title || getModuleTitle(question.module?.id || 0)}
+            </p>
+
+            {/* Info Grid */}
+            <div className='grid grid-cols-2 gap-1 text-xs mb-2 bg-muted/20 p-2 rounded'>
+              <div className='flex justify-between'><span className='text-muted-foreground'>Pos:</span> <span className='font-medium'>{question.position}</span></div>
+              <div className='flex justify-between'><span className='text-muted-foreground'>Choices:</span> <span className='font-medium'>{question.type === 'mcq' ? (question.choices?.length || 0) : 'N/A'}</span></div>
+            </div>
+
+            {/* Answer */}
+            <div className='text-xs mb-2'>
+              <span className='text-muted-foreground'>Answer: </span>
+              <span className='font-medium'>{question.answer.join(', ')}</span>
             </div>
 
             {/* Content Preview */}
-            <div className='bg-muted/50 rounded-lg p-4 mb-4'>
-              <h4 className='text-sm font-medium mb-2'>Content Preview:</h4>
-              <div className='text-sm text-muted-foreground line-clamp-3'>
+            <div className='bg-muted/30 rounded p-2 mb-2 flex-1'>
+              <div className='text-xs text-muted-foreground line-clamp-2'>
                 {question.content_markdown.replace(/\*\*/g, '').replace(/\n/g, ' ')}
               </div>
             </div>
 
-            {/* MCQ Choices Preview */}
+            {/* MCQ Choices */}
             {question.type === 'mcq' && question.choices && question.choices.length > 0 && (
-              <div className='mb-4'>
-                <h4 className='text-sm font-medium mb-2'>Choices:</h4>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
-                  {question.choices.slice(0, 4).map((choice, index) => (
-                    <div key={index} className='flex items-center gap-2 text-sm'>
-                      <Badge variant='outline' className='w-8 justify-center'>
-                        {choice.label}
-                      </Badge>
-                      <span className='text-muted-foreground line-clamp-1'>
+              <div className='mb-2'>
+                <div className='text-xs font-medium mb-1'>Choices:</div>
+                <div className='space-y-1'>
+                  {question.choices.slice(0, 2).map((choice, index) => (
+                    <div key={index} className='flex items-center gap-1 text-xs'>
+                      <Badge variant='outline' className='w-3 h-3 text-xs p-0 justify-center'>{choice.label}</Badge>
+                      <span className='text-muted-foreground truncate'>
                         {choice.content_markdown.replace(/\*\*/g, '')}
                       </span>
                     </div>
                   ))}
+                  {question.choices.length > 2 && (
+                    <div className='text-xs text-muted-foreground'>+{question.choices.length - 2} more...</div>
+                  )}
                 </div>
               </div>
             )}
 
-            <div className='flex gap-2'>
+            {/* Action Buttons */}
+            <div className='flex gap-1 mt-auto'>
               <Button
                 variant='outline'
                 size='sm'
-                onClick={() => {/* TODO: Preview question */}}
+                onClick={() => handlePreview(question)}
+                className='h-6 text-xs px-2 flex-1'
               >
-                <Eye className='mr-2 h-4 w-4' />
-                Preview
+                <Eye className='mr-1 h-3 w-3' />Preview
               </Button>
               <Button 
                 variant='outline' 
                 size='sm'
                 onClick={() => onEdit(question)}
+                className='h-6 text-xs px-2 flex-1'
               >
-                <Edit className='mr-2 h-4 w-4' />
-                Edit
+                <Edit className='mr-1 h-3 w-3' />Edit
               </Button>
             </div>
           </div>

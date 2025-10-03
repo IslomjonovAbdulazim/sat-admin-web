@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useSearch, Link } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Plus, Download, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { questionsApi, type Question } from '@/lib/questions-api'
 import { modulesApi } from '@/lib/modules-api'
+import { CreateQuestionDialog } from './components/create-question-dialog'
 import { QuestionsList } from './components/questions-list'
 
 export function QuestionsPage() {
@@ -117,15 +118,19 @@ export function QuestionsPage() {
             </p>
           </div>
           <div className='flex items-center space-x-3'>
-            <Button asChild size='lg' className='bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200' disabled={selectedModule === 'none'}>
-              <Link 
-                to="/tests/questions/create" 
-                search={selectedModule !== 'none' ? { moduleId: selectedModule } : { moduleId: undefined }}
+            <CreateQuestionDialog 
+              defaultModuleId={selectedModule !== 'none' ? parseInt(selectedModule) : undefined}
+              onSuccess={handleRefresh}
+            >
+              <Button 
+                size='lg'
+                className='bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 shadow-lg hover:shadow-xl transition-all duration-200'
+                disabled={selectedModule === 'none'}
               >
                 <Plus className='mr-2 h-5 w-5' />
                 Add Question
-              </Link>
-            </Button>
+              </Button>
+            </CreateQuestionDialog>
           </div>
         </div>
 

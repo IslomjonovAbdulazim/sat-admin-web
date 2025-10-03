@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { Plus, Minus } from 'lucide-react'
+import { Plus, Minus, Eye } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { questionsApi, type CreateQuestionRequest } from '@/lib/questions-api'
 import { modulesApi } from '@/lib/modules-api'
 
@@ -40,17 +41,9 @@ const createQuestionSchema = z.object({
   position: z.number().min(1, 'Position must be at least 1'),
   module_id: z.number().min(1, 'Module is required'),
   choices: z.array(choiceSchema).optional(),
-  answer: z.array(z.string().min(1, 'Answer cannot be empty')).min(1, 'At least one answer is required'),
+  answer: z.array(z.string().min(1, 'Answer cannot be empty')).optional(),
+  mcq_correct_answer: z.string().optional(),
   explanation_markdown: z.string().max(2000, 'Explanation must be less than 2000 characters').optional(),
-}).refine((data) => {
-  // If type is 'mcq', choices are required
-  if (data.type === 'mcq' && (!data.choices || data.choices.length === 0)) {
-    return false
-  }
-  return true
-}, {
-  message: 'Multiple choice questions require choices',
-  path: ['choices']
 })
 
 type CreateQuestionFormData = z.infer<typeof createQuestionSchema>
@@ -72,11 +65,11 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
     reset,
     setValue,
     watch,
-    control,
   } = useForm<CreateQuestionFormData>({
     resolver: zodResolver(createQuestionSchema),
     defaultValues: {
       position: 1,
+      type: 'mcq',
       module_id: defaultModuleId || undefined,
       choices: [
         { label: 'A', content_markdown: '' },
@@ -84,19 +77,50 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
         { label: 'C', content_markdown: '' },
         { label: 'D', content_markdown: '' },
       ],
-      answer: [''],
+      answer: [],
+      mcq_correct_answer: 'A',
     }
   })
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'choices',
-  })
 
-  // For managing answers, we'll use state instead of useFieldArray since answers are string primitives
+  // For managing answers for fill_blank questions
   const [answers, setAnswers] = useState<string[]>([''])
+  // For managing MCQ correct answer
+  const [mcqCorrectAnswer, setMcqCorrectAnswer] = useState<string>('A')
+  
+  // For managing preview dialogs
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewContent, setPreviewContent] = useState('')
+  const [previewTitle, setPreviewTitle] = useState('')
 
   const watchType = watch('type')
+  
+  // Reset answers/choices when type changes
+  useEffect(() => {
+    if (watchType === 'fill_blank') {
+      console.log('Switching to fill_blank type')
+      setAnswers([''])
+      setValue('answer', [''])
+      setValue('choices', [])  // Clear choices for fill_blank
+    } else if (watchType === 'mcq') {
+      console.log('Switching to mcq type')
+      setMcqCorrectAnswer('A')
+      setValue('mcq_correct_answer', 'A')
+      setValue('choices', [
+        { label: 'A', content_markdown: '' },
+        { label: 'B', content_markdown: '' },
+        { label: 'C', content_markdown: '' },
+        { label: 'D', content_markdown: '' },
+      ])
+    }
+  }, [watchType, setValue])
+  
+  // Function to show preview
+  const showPreview = (content: string, title: string) => {
+    setPreviewContent(content)
+    setPreviewTitle(title)
+    setPreviewOpen(true)
+  }
 
   // Fetch all modules for the dropdown
   const { data: modules = [] } = useQuery({
@@ -119,8 +143,10 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
       queryClient.invalidateQueries({ queryKey: ['module-questions'] })
       setOpen(false)
       setAnswers([''])
+      setMcqCorrectAnswer('A')
       reset({
         position: 1,
+        type: 'mcq',
         module_id: defaultModuleId || undefined,
         choices: [
           { label: 'A', content_markdown: '' },
@@ -128,7 +154,8 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
           { label: 'C', content_markdown: '' },
           { label: 'D', content_markdown: '' },
         ],
-        answer: [''],
+        answer: [],
+        mcq_correct_answer: 'A',
       })
       onSuccess?.()
     },
@@ -139,19 +166,51 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
   })
 
   const onSubmit = (data: CreateQuestionFormData) => {
+    console.log('Form submission data:', data)
+    console.log('Current answers state:', answers)
+    console.log('Current mcqCorrectAnswer:', mcqCorrectAnswer)
+    
+    // Validate MCQ questions
+    if (data.type === 'mcq') {
+      if (!mcqCorrectAnswer) {
+        toast.error('Please select the correct answer for the multiple choice question')
+        return
+      }
+      // Check if all choices have content
+      const choices = data.choices || []
+      if (choices.length !== 4 || choices.some(choice => !choice.content_markdown.trim())) {
+        toast.error('Please fill in all 4 choice options (A, B, C, D)')
+        return
+      }
+    }
+
+    // Validate fill-blank questions
+    if (data.type === 'fill_blank') {
+      const validAnswers = answers.filter(answer => answer.trim())
+      console.log('Valid fill-blank answers:', validAnswers)
+      if (validAnswers.length === 0) {
+        toast.error('Please provide at least one answer for the fill-in-the-blank question')
+        return
+      }
+    }
+
     const payload: CreateQuestionRequest = {
       ...data,
-      answer: answers, // Use the current answers state
+      answer: data.type === 'mcq' ? [mcqCorrectAnswer] : answers.filter(a => a.trim()),
       choices: data.type === 'mcq' ? data.choices || [] : null,
     }
+    
+    console.log('Final payload:', payload)
     createQuestionMutation.mutate(payload)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setAnswers([''])
+      setMcqCorrectAnswer('A')
       reset({
         position: 1,
+        type: 'mcq',
         module_id: defaultModuleId || undefined,
         choices: [
           { label: 'A', content_markdown: '' },
@@ -159,7 +218,8 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
           { label: 'C', content_markdown: '' },
           { label: 'D', content_markdown: '' },
         ],
-        answer: [''],
+        answer: [],
+        mcq_correct_answer: 'A',
       })
     }
     setOpen(newOpen)
@@ -170,60 +230,19 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className='sm:max-w-2xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='sm:max-w-xl max-h-[85vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Create New Question</DialogTitle>
-          <DialogDescription>
-            Create a new question within a module. Choose between multiple choice or fill-in-the-blank formats.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='title'>Question Title</Label>
-              <Input
-                id='title'
-                placeholder='Grammar Question 1'
-                {...register('title')}
-                disabled={createQuestionMutation.isPending}
-              />
-              {errors.title && (
-                <p className='text-sm text-destructive'>{errors.title.message}</p>
-              )}
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='type'>Question Type</Label>
-              <Select
-                value={watchType}
-                onValueChange={(value: 'mcq' | 'fill_blank') => setValue('type', value)}
-                disabled={createQuestionMutation.isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select question type' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='mcq'>Multiple Choice</SelectItem>
-                  <SelectItem value='fill_blank'>Fill in the Blank</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.type && (
-                <p className='text-sm text-destructive'>{errors.type.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='module_id'>Module</Label>
+          <div className='flex items-center justify-between'>
+            <DialogTitle>Create New Question</DialogTitle>
+            <div className='flex items-center gap-2'>
+              <Label className='text-sm font-medium'>Module:</Label>
               <Select
                 value={watch('module_id')?.toString()}
                 onValueChange={(value) => setValue('module_id', parseInt(value))}
                 disabled={createQuestionMutation.isPending || !!defaultModuleId}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select a module' />
+                <SelectTrigger className='w-[200px]'>
+                  <SelectValue placeholder='Select module' />
                 </SelectTrigger>
                 <SelectContent>
                   {modules.map((module) => (
@@ -233,13 +252,51 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
                   ))}
                 </SelectContent>
               </Select>
-              {errors.module_id && (
-                <p className='text-sm text-destructive'>{errors.module_id.message}</p>
+            </div>
+          </div>
+          <DialogDescription>
+            Create a new question within a module. Choose between multiple choice or fill-in-the-blank formats.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit(onSubmit)} className='space-y-3'>
+          <div className='grid grid-cols-6 gap-2'>
+            <div className='col-span-3 space-y-1'>
+              <Label htmlFor='title' className='text-sm'>Title</Label>
+              <Input
+                id='title'
+                placeholder='Question title'
+                {...register('title')}
+                className='h-8 text-sm'
+                disabled={createQuestionMutation.isPending}
+              />
+              {errors.title && (
+                <p className='text-xs text-destructive'>{errors.title.message}</p>
               )}
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='position'>Position</Label>
+            <div className='col-span-2 space-y-1'>
+              <Label htmlFor='type' className='text-sm'>Type</Label>
+              <Select
+                value={watchType}
+                onValueChange={(value: 'mcq' | 'fill_blank') => setValue('type', value)}
+                disabled={createQuestionMutation.isPending}
+              >
+                <SelectTrigger className='h-8 text-sm'>
+                  <SelectValue placeholder='Select type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='mcq'>Multiple Choice</SelectItem>
+                  <SelectItem value='fill_blank'>Fill in the Blank</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.type && (
+                <p className='text-xs text-destructive'>{errors.type.message}</p>
+              )}
+            </div>
+
+            <div className='col-span-1 space-y-1'>
+              <Label htmlFor='position' className='text-sm'>Pos</Label>
               <Input
                 id='position'
                 type='number'
@@ -247,140 +304,168 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
                 placeholder='1'
                 {...register('position', { valueAsNumber: true })}
                 disabled={createQuestionMutation.isPending}
+                className='text-center h-8 text-sm'
               />
               {errors.position && (
-                <p className='text-sm text-destructive'>{errors.position.message}</p>
+                <p className='text-xs text-destructive'>{errors.position.message}</p>
               )}
             </div>
           </div>
 
-          <div className='space-y-2'>
-            <Label htmlFor='content_markdown'>Question Content (Markdown)</Label>
+          {errors.module_id && (
+            <p className='text-xs text-destructive'>{errors.module_id.message}</p>
+          )}
+
+          <div className='space-y-1'>
+            <div className='flex items-center gap-2'>
+              <Label htmlFor='content_markdown' className='text-sm'>Question Content</Label>
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
+                onClick={() => showPreview(watch('content_markdown') || '', 'Question Content Preview')}
+                disabled={createQuestionMutation.isPending}
+                className='h-6 w-6 p-0'
+              >
+                <Eye className='h-3 w-3' />
+              </Button>
+            </div>
             <Textarea
               id='content_markdown'
-              placeholder='**Choose the best answer:**\n\nWhich sentence is grammatically correct?'
-              rows={4}
+              placeholder='**Choose the best answer:** Which sentence is correct?'
+              rows={2}
               {...register('content_markdown')}
               disabled={createQuestionMutation.isPending}
+              className='text-sm'
             />
             {errors.content_markdown && (
-              <p className='text-sm text-destructive'>{errors.content_markdown.message}</p>
+              <p className='text-xs text-destructive'>{errors.content_markdown.message}</p>
             )}
           </div>
 
           {watchType === 'mcq' && (
-            <div className='space-y-4'>
+            <div className='space-y-1'>
+              <Label className='text-sm'>Choices (Select correct)</Label>
+              <RadioGroup
+                value={mcqCorrectAnswer}
+                onValueChange={setMcqCorrectAnswer}
+                disabled={createQuestionMutation.isPending}
+                className='space-y-1'
+              >
+                {['A', 'B', 'C', 'D'].map((label, index) => {
+                  setValue(`choices.${index}.label`, label)
+                  return (
+                    <div key={index} className='flex gap-1 items-center'>
+                      <RadioGroupItem value={label} id={`choice-${label}`} className='h-3 w-3' />
+                      <div className='w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium'>
+                        {label}
+                      </div>
+                      <Input
+                        placeholder={`Choice ${label}`}
+                        {...register(`choices.${index}.content_markdown`)}
+                        className='flex-1 h-7 text-sm'
+                        disabled={createQuestionMutation.isPending}
+                      />
+                      <Button
+                        type='button'
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => showPreview(watch(`choices.${index}.content_markdown`) || '', `Choice ${label} Preview`)}
+                        disabled={createQuestionMutation.isPending}
+                        className='h-6 w-6 p-0'
+                      >
+                        <Eye className='h-2 w-2' />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </RadioGroup>
+              {errors.choices && (
+                <p className='text-xs text-destructive'>{errors.choices.message}</p>
+              )}
+            </div>
+          )}
+
+          {watchType === 'fill_blank' && (
+            <div className='space-y-1'>
               <div className='flex items-center justify-between'>
-                <Label>Answer Choices</Label>
+                <Label className='text-sm'>Answers</Label>
                 <Button
                   type='button'
                   variant='outline'
                   size='sm'
-                  onClick={() => append({ label: String.fromCharCode(65 + fields.length), content_markdown: '' })}
+                  onClick={() => setAnswers([...answers, ''])}
                   disabled={createQuestionMutation.isPending}
+                  className='h-6 text-xs'
                 >
-                  <Plus className='h-4 w-4 mr-2' />
-                  Add Choice
+                  <Plus className='h-3 w-3 mr-1' />
+                  Add
                 </Button>
               </div>
-              <div className='space-y-3'>
-                {fields.map((field, index) => (
-                  <div key={field.id} className='flex gap-2'>
+              <div className='space-y-1'>
+                {answers.map((answer, index) => (
+                  <div key={index} className='flex gap-1'>
                     <Input
-                      placeholder='A'
-                      {...register(`choices.${index}.label`)}
-                      className='w-16'
+                      placeholder='Answer'
+                      value={answer}
+                      onChange={(e) => {
+                        const newAnswers = [...answers]
+                        newAnswers[index] = e.target.value
+                        setAnswers(newAnswers)
+                        setValue('answer', newAnswers)
+                      }}
+                      className='flex-1 h-7 text-sm'
                       disabled={createQuestionMutation.isPending}
                     />
-                    <Input
-                      placeholder='Choice content'
-                      {...register(`choices.${index}.content_markdown`)}
-                      className='flex-1'
-                      disabled={createQuestionMutation.isPending}
-                    />
-                    {fields.length > 2 && (
+                    {answers.length > 1 && (
                       <Button
                         type='button'
                         variant='outline'
                         size='sm'
-                        onClick={() => remove(index)}
+                        onClick={() => {
+                          const newAnswers = answers.filter((_, i) => i !== index)
+                          setAnswers(newAnswers)
+                          setValue('answer', newAnswers)
+                        }}
                         disabled={createQuestionMutation.isPending}
+                        className='h-7 w-7 p-0'
                       >
-                        <Minus className='h-4 w-4' />
+                        <Minus className='h-3 w-3' />
                       </Button>
                     )}
                   </div>
                 ))}
               </div>
-              {errors.choices && (
-                <p className='text-sm text-destructive'>{errors.choices.message}</p>
+              {errors.answer && (
+                <p className='text-xs text-destructive'>{errors.answer.message}</p>
               )}
             </div>
           )}
 
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <Label>Correct Answer(s)</Label>
+          <div className='space-y-1'>
+            <div className='flex items-center gap-2'>
+              <Label htmlFor='explanation_markdown' className='text-sm'>Explanation</Label>
               <Button
                 type='button'
-                variant='outline'
+                variant='ghost'
                 size='sm'
-                onClick={() => setAnswers([...answers, ''])}
+                onClick={() => showPreview(watch('explanation_markdown') || '', 'Explanation Preview')}
                 disabled={createQuestionMutation.isPending}
+                className='h-6 w-6 p-0'
               >
-                <Plus className='h-4 w-4 mr-2' />
-                Add Answer
+                <Eye className='h-3 w-3' />
               </Button>
             </div>
-            <div className='space-y-2'>
-              {answers.map((answer, index) => (
-                <div key={index} className='flex gap-2'>
-                  <Input
-                    placeholder={watchType === 'mcq' ? 'A' : '4'}
-                    value={answer}
-                    onChange={(e) => {
-                      const newAnswers = [...answers]
-                      newAnswers[index] = e.target.value
-                      setAnswers(newAnswers)
-                      setValue('answer', newAnswers)
-                    }}
-                    className='flex-1'
-                    disabled={createQuestionMutation.isPending}
-                  />
-                  {answers.length > 1 && (
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='sm'
-                      onClick={() => {
-                        const newAnswers = answers.filter((_, i) => i !== index)
-                        setAnswers(newAnswers)
-                        setValue('answer', newAnswers)
-                      }}
-                      disabled={createQuestionMutation.isPending}
-                    >
-                      <Minus className='h-4 w-4' />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {errors.answer && (
-              <p className='text-sm text-destructive'>{errors.answer.message}</p>
-            )}
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='explanation_markdown'>Explanation (Optional)</Label>
             <Textarea
               id='explanation_markdown'
               placeholder='The correct answer is A because...'
-              rows={3}
+              rows={2}
               {...register('explanation_markdown')}
               disabled={createQuestionMutation.isPending}
+              className='text-sm'
             />
             {errors.explanation_markdown && (
-              <p className='text-sm text-destructive'>{errors.explanation_markdown.message}</p>
+              <p className='text-xs text-destructive'>{errors.explanation_markdown.message}</p>
             )}
           </div>
 
@@ -402,6 +487,36 @@ export function CreateQuestionDialog({ children, defaultModuleId, onSuccess }: C
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Markdown Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className='sm:max-w-lg max-h-[70vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='text-lg'>{previewTitle}</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-2'>
+            <div className='p-2 bg-muted rounded'>
+              <h4 className='text-xs font-medium mb-1'>Raw:</h4>
+              <pre className='text-xs whitespace-pre-wrap font-mono bg-background p-2 rounded border max-h-20 overflow-y-auto'>
+                {previewContent || 'No content'}
+              </pre>
+            </div>
+            <div className='p-2 bg-muted rounded'>
+              <h4 className='text-xs font-medium mb-1'>Preview:</h4>
+              <div className='prose prose-xs max-w-none bg-background p-2 rounded border text-sm'>
+                <div dangerouslySetInnerHTML={{ 
+                  __html: previewContent
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n\n/g, '</p><p>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/^(.*)$/, '<p>$1</p>')
+                }} />
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

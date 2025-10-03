@@ -21,7 +21,6 @@ import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenti
 import { Route as AuthenticatedContentWordsRouteImport } from './routes/_authenticated/content/words'
 import { Route as AuthenticatedContentLessonsRouteImport } from './routes/_authenticated/content/lessons'
 import { Route as AuthenticatedContentCoursesRouteImport } from './routes/_authenticated/content/courses'
-import { Route as AuthenticatedTestsQuestionsCreateRouteImport } from './routes/_authenticated/tests/questions/create'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -90,12 +89,6 @@ const AuthenticatedContentCoursesRoute =
     path: '/content/courses',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedTestsQuestionsCreateRoute =
-  AuthenticatedTestsQuestionsCreateRouteImport.update({
-    id: '/create',
-    path: '/create',
-    getParentRoute: () => AuthenticatedTestsQuestionsRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
@@ -107,9 +100,8 @@ export interface FileRoutesByFullPath {
   '/content/words': typeof AuthenticatedContentWordsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/tests/modules': typeof AuthenticatedTestsModulesRoute
-  '/tests/questions': typeof AuthenticatedTestsQuestionsRouteWithChildren
+  '/tests/questions': typeof AuthenticatedTestsQuestionsRoute
   '/tests/tests': typeof AuthenticatedTestsTestsRoute
-  '/tests/questions/create': typeof AuthenticatedTestsQuestionsCreateRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -121,9 +113,8 @@ export interface FileRoutesByTo {
   '/content/words': typeof AuthenticatedContentWordsRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/tests/modules': typeof AuthenticatedTestsModulesRoute
-  '/tests/questions': typeof AuthenticatedTestsQuestionsRouteWithChildren
+  '/tests/questions': typeof AuthenticatedTestsQuestionsRoute
   '/tests/tests': typeof AuthenticatedTestsTestsRoute
-  '/tests/questions/create': typeof AuthenticatedTestsQuestionsCreateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,9 +128,8 @@ export interface FileRoutesById {
   '/_authenticated/content/words': typeof AuthenticatedContentWordsRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/tests/modules': typeof AuthenticatedTestsModulesRoute
-  '/_authenticated/tests/questions': typeof AuthenticatedTestsQuestionsRouteWithChildren
+  '/_authenticated/tests/questions': typeof AuthenticatedTestsQuestionsRoute
   '/_authenticated/tests/tests': typeof AuthenticatedTestsTestsRoute
-  '/_authenticated/tests/questions/create': typeof AuthenticatedTestsQuestionsCreateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -155,7 +145,6 @@ export interface FileRouteTypes {
     | '/tests/modules'
     | '/tests/questions'
     | '/tests/tests'
-    | '/tests/questions/create'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -169,7 +158,6 @@ export interface FileRouteTypes {
     | '/tests/modules'
     | '/tests/questions'
     | '/tests/tests'
-    | '/tests/questions/create'
   id:
     | '__root__'
     | '/_authenticated'
@@ -184,7 +172,6 @@ export interface FileRouteTypes {
     | '/_authenticated/tests/modules'
     | '/_authenticated/tests/questions'
     | '/_authenticated/tests/tests'
-    | '/_authenticated/tests/questions/create'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -278,30 +265,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedContentCoursesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/tests/questions/create': {
-      id: '/_authenticated/tests/questions/create'
-      path: '/create'
-      fullPath: '/tests/questions/create'
-      preLoaderRoute: typeof AuthenticatedTestsQuestionsCreateRouteImport
-      parentRoute: typeof AuthenticatedTestsQuestionsRoute
-    }
   }
 }
-
-interface AuthenticatedTestsQuestionsRouteChildren {
-  AuthenticatedTestsQuestionsCreateRoute: typeof AuthenticatedTestsQuestionsCreateRoute
-}
-
-const AuthenticatedTestsQuestionsRouteChildren: AuthenticatedTestsQuestionsRouteChildren =
-  {
-    AuthenticatedTestsQuestionsCreateRoute:
-      AuthenticatedTestsQuestionsCreateRoute,
-  }
-
-const AuthenticatedTestsQuestionsRouteWithChildren =
-  AuthenticatedTestsQuestionsRoute._addFileChildren(
-    AuthenticatedTestsQuestionsRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedLearningCentersRoute: typeof AuthenticatedLearningCentersRoute
@@ -312,7 +277,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContentWordsRoute: typeof AuthenticatedContentWordsRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedTestsModulesRoute: typeof AuthenticatedTestsModulesRoute
-  AuthenticatedTestsQuestionsRoute: typeof AuthenticatedTestsQuestionsRouteWithChildren
+  AuthenticatedTestsQuestionsRoute: typeof AuthenticatedTestsQuestionsRoute
   AuthenticatedTestsTestsRoute: typeof AuthenticatedTestsTestsRoute
 }
 
@@ -325,8 +290,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContentWordsRoute: AuthenticatedContentWordsRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedTestsModulesRoute: AuthenticatedTestsModulesRoute,
-  AuthenticatedTestsQuestionsRoute:
-    AuthenticatedTestsQuestionsRouteWithChildren,
+  AuthenticatedTestsQuestionsRoute: AuthenticatedTestsQuestionsRoute,
   AuthenticatedTestsTestsRoute: AuthenticatedTestsTestsRoute,
 }
 
